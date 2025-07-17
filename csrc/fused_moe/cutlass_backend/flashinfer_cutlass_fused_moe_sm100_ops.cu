@@ -370,6 +370,7 @@ class FusedMoeRunner : public torch::CustomClassHolder {
 
   int64_t getTacticNum() {
     std::lock_guard<std::mutex> lock(mMutex);
+    std::cout << "getTotalTacticNum: " << mAllProfiles.size() << std::endl;
     return mAllProfiles.size();
   }
 
