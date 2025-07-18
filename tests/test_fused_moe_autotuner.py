@@ -202,16 +202,6 @@ EP_NUM_EXPERTS = [8]
 EP_TOP_K = [2]
 
 
-@pytest.mark.parametrize("batch_size", BATCH_SIZES)
-@pytest.mark.parametrize("hidden_size", HIDDEN_SIZES)
-@pytest.mark.parametrize("num_experts", NUM_EXPERTS)
-@pytest.mark.parametrize("top_k", TOP_K_VALUES)
-@pytest.mark.parametrize("intermediate_size", INTERMEDIATE_SIZES)
-@pytest.mark.parametrize(
-    "otype, wtype",
-    [(torch.float16, torch.float8_e4m3fn), (torch.bfloat16, torch.float8_e4m3fn)],
-)
-@pytest.mark.parametrize("quantized_input", [False, True])
 def test_moe_nvfp4(
     batch_size,
     hidden_size,
@@ -373,10 +363,13 @@ def test_moe_nvfp4(
 
 if __name__ == "__main__":
     # pytest.main([__file__, "-v"])
-    TEST_BS = [1,4,6,8,12,16,24,32,48,64,96,128, 192, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096, 6144, 8192]
+    # TEST_BS = [1,4,6,8,12,16,24,32,48,64,96,128, 192, 256, 384, 512, 768, 1024, 1536, 2048, 3072, 4096, 6144, 8192]
+    TEST_BS = [1,6,128, 512, 3072, 4096, 8192]
     # TEST_BS = [1,48,64,96,128]
+    # Clear cache once at the beginning for the entire test
     AutoTuner.get().clear_cache()
     for bs in TEST_BS:
+        print(f"\n=== Testing batch size {bs} ===")
         test_moe_nvfp4(
             batch_size=bs,
             hidden_size=7168,

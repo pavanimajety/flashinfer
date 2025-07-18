@@ -168,10 +168,12 @@ class FusedMoeRunner : public torch::CustomClassHolder {
     }
 
     mProfiler = std::make_shared<kernels::GemmProfilerBackend>();
+    std::cout << "mKernelRunner get tactics size: " << mKernelRunner->getTactics().size() << std::endl;
     mAllProfiles = mKernelRunner->getTactics();
   }
 
   ~FusedMoeRunner() {
+    std::cout << "FusedMoeRunner is destroyed" << std::endl;
     if (mProfileWorkspace != nullptr) {
       auto const cu_free_status = cudaFree(mProfileWorkspace);
       TORCH_CHECK(cu_free_status == cudaSuccess,
@@ -373,6 +375,8 @@ class FusedMoeRunner : public torch::CustomClassHolder {
     std::cout << "getTotalTacticNum: " << mAllProfiles.size() << std::endl;
     return mAllProfiles.size();
   }
+
+
 
   void runGemmProfile(torch::Tensor const& input, torch::Tensor const& fc1_expert_weights,
                       torch::Tensor const& fc2_expert_weights, int64_t const top_k,

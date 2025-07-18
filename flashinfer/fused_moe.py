@@ -305,6 +305,9 @@ def gen_fused_moe_sm100_module() -> JitSpec:
     )
 
 
+# Module-level cache for MoERunner instances
+_moe_runner_cache = {}
+
 @functools.cache
 def get_fused_moe_sm100_module():
     module = gen_fused_moe_sm100_module().build_and_load(class_name="FusedMoeRunner")
@@ -328,6 +331,7 @@ def get_fused_moe_sm100_module():
             use_fp8_block_scaling: bool,
             use_w4a8_group_scaling: bool,
         ):
+            print(f"MoERunner __init__ is called")
             self.x_dtype = x_dtype
             self.weight_dtype = weight_dtype
             self.output_dtype = output_dtype
@@ -462,7 +466,7 @@ def get_fused_moe_sm100_module():
         # TODO: set min_latency_mode always to False due to the error in the moe_kernels
         min_latency_tensor = torch.empty(0)
 
-        # allocate workspace for profiling
+        # Create MoERunner instance
         moe_runner = MoERunner(
             x_dtype=input.dtype,
             weight_dtype=fc1_expert_weights.dtype,
