@@ -1,5 +1,7 @@
+import csv
 import numpy as np
 import torch
+from datetime import datetime
 
 import flashinfer
 from flashinfer.testing.utils import bench_gpu_time_with_cudagraph
@@ -113,20 +115,62 @@ def bench_trtllm_mla(batch_size, q_len_per_request, seq_len, page_size, dtype):
         * sum(seq_lens)
         * q_len_per_request
     )
+    
+    result = {
+        "batch_size": batch_size,
+        "q_len_per_request": q_len_per_request,
+        "seq_len": seq_len,
+        "num_q_heads": num_q_heads,
+        "num_kv_heads": num_kv_heads,
+        "qk_nope_head_dim": qk_nope_head_dim,
+        "qk_rope_head_dim": qk_rope_head_dim,
+        "kv_lora_rank": kv_lora_rank,
+        "page_size": page_size,
+        "dtype": str(dtype),
+        "execution_time_ms": f"{ms:.4f}",
+        "memory_bandwidth_gb_s": f"{io / ms / 1024 / 1024:.2f}",
+        "tflops": f"{flops * 1e-9 / ms:.2f}"
+    }
+    
     print(
-        f"batch_size={batch_size}, q_len_per_request={q_len_per_request}, seq_len={seq_len}, num_q_heads={num_q_heads}, num_kv_heads={num_kv_heads}, qk_nope_head_dim={qk_nope_head_dim}, qk_rope_head_dim={qk_rope_head_dim}, kv_lora_rank={kv_lora_rank}, page_size={page_size}"
+        f"batch_size={batch_size}, q_len_per_request={q_len_per_request}, "
+        f"seq_len={seq_len}, num_q_heads={num_q_heads}, num_kv_heads={num_kv_heads}, "
+        f"qk_nope_head_dim={qk_nope_head_dim}, qk_rope_head_dim={qk_rope_head_dim}, "
+        f"kv_lora_rank={kv_lora_rank}, page_size={page_size}, "
+        f"dtype={dtype}, "
+        f"execution time: {ms:.4f} ms, "
+        f"memory bandwidth: {io / ms / 1024 / 1024:.2f} GB/s, "
+        f"TFLOPs: {flops * 1e-9 / ms:.2f}"
     )
-    print(f"execution time: {ms} ms")
-    print(f"memory bandwidth: {io / ms / 1024 / 1024:.2f} GB/s")
-    print(f"FLOPs: {flops * 1e-9 / ms:.2f} TFLOPs/s")
+    
+    return result
 
 
 if __name__ == "__main__":
-    for dtype in [torch.bfloat16, torch.float8_e4m3fn]:
-        for page_size in [32, 64]:
-            for batch_size in [1, 2, 4, 16, 32, 64, 128, 256, 512, 768, 1024]:
-                for seq_len in [1024, 4096, 8192]:
-                    for q_len_per_request in [1, 2, 4, 8, 16]:
-                        bench_trtllm_mla(
-                            batch_size, q_len_per_request, seq_len, page_size, dtype
-                        )
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    csv_filename = f"mla_benchmark_results_{timestamp}.csv"
+    
+    results = []
+    
+    # for page_size in [32]:
+    for batch_size in [1, 2, 4, 16, 32, 64, 128, 256, 512, 768, 1024]:
+        for seq_len in [2048, 4096, 8192, 16384, 12288]:
+            for dtype in [torch.bfloat16, torch.float8_e4m3fn]:
+                # for q_len_per_request in [1, 2, 4, 8, 16]:
+                result = bench_trtllm_mla(
+                    batch_size,
+                    1,  # q_len_per_request
+                    seq_len,
+                    32,  # page_size
+                    dtype,
+                )
+                results.append(result)
+    
+    # Write results to CSV
+    if results:
+        fieldnames = results[0].keys()
+        with open(csv_filename, 'w', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(results)
+        print(f"\nResults written to {csv_filename}")
